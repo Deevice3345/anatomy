@@ -321,7 +321,9 @@ function labelMarks(theta) {
   const z = REC_TOP + 0.2;
   const pt = (r, a) => [C[0] + Math.sin(a) * r, C[1] - Math.cos(a) * r];
   const arc = (r, a0, a1) => onTop(Array.from({ length: 9 }, (_, i) => pt(r, a0 + (a1 - a0) * i / 8)), z, P);
-  return lineSvg(onTop([pt(9, theta), pt(LABEL_R - 3, theta)], z, P), { tone: "lo", free: "start" }) +
+  const sector = (a0, a1, r0, r1) => { const n = 10, pts = []; for (let i = 0; i <= n; i++) pts.push(pt(r1, a0 + (a1 - a0) * i / n)); for (let i = n; i >= 0; i--) pts.push(pt(r0, a0 + (a1 - a0) * i / n)); return onTop(pts, z, P, true); };
+  const fills = '<path d="' + sector(theta + 0.3, theta + 1.35, 14, LABEL_R - 6) + sector(theta + Math.PI + 0.3, theta + Math.PI + 1.35, 14, LABEL_R - 6) + '" style="fill:var(--anatomy-mid);stroke:none" opacity=".55"/>';
+  return fills + lineSvg(onTop([pt(9, theta), pt(LABEL_R - 3, theta)], z, P), { tone: "mid", free: "start" }) +
     lineSvg(arc(36, theta + 0.35, theta + 1.25) + arc(30, theta + 0.35, theta + 1.0) + arc(24, theta + 0.35, theta + 0.8), { tone: "mid", free: true }) +
     lineSvg(arc(36, theta + Math.PI + 0.35, theta + Math.PI + 1.05), { tone: "mid", free: true });
 }
@@ -562,10 +564,8 @@ function tick(now) {
   const want = SPEEDS[speed] * (1 + pitch / 100);
   rpm = calm ? want : rpm + (want - rpm) * (1 - Math.exp(-dt / 0.35));
   const omega = (rpm / 60) * Math.PI * 2;
-  if (!calm) {
-    theta = (theta + omega * dt) % (Math.PI * 2);
-    ROWS.forEach((row, i) => { phases[i] = (phases[i] + apparent(omega, row.n) * dt) % (Math.PI * 2); });
-  }
+  theta = (theta + omega * dt) % (Math.PI * 2);
+  ROWS.forEach((row, i) => { phases[i] = (phases[i] + apparent(omega, row.n) * dt) % (Math.PI * 2); });
   for (const s of Object.values(springs)) {
     if (calm) { s.at = s.goal; s.rate = 0; s.wait = 0; continue; }
     if (s.wait > 0) { s.wait -= dt; continue; }
@@ -573,7 +573,7 @@ function tick(now) {
     if (s.at < 0) { s.at = 0; s.rate = 0; }
   }
   draw();
-  frame = visible && !calm ? requestAnimationFrame(tick) : 0;
+  frame = visible ? requestAnimationFrame(tick) : 0;
 }
 const run = () => { if (!frame && visible) { last = 0; frame = requestAnimationFrame(tick); } };
 const hold = () => { touring = false; clearTimeout(idleTimer); idleTimer = setTimeout(() => { touring = !still.matches; clock = 0; run(); }, 6000); run(); };
