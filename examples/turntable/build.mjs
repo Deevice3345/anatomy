@@ -772,6 +772,14 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-pitch input::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--anatomy-strong);border:3px solid var(--anatomy-page)}
 .tt-pitch output{font-size:14px}
 }
+@media (max-width:600px){
+.tt .iso-stage{--anatomy-weight:.95px}
+[data-theme="light"] .tt .iso-line[data-tone="lo"]{stroke:#98989e}
+[data-theme="light"] .tt .iso-line[data-tone="faint"]{stroke:#c2c2c6}
+[data-theme="dark"] .tt .iso-line[data-tone="lo"]{stroke:#585858}
+[data-theme="dark"] .tt .iso-line[data-tone="faint"]{stroke:#383838}
+.tt .iso-dots circle{opacity:.5}
+}
 @media (max-width:880px){.tt-mobile{display:block}.tt-side{display:none}.tt{grid-template-columns:minmax(0,1fr)}.tt-side{position:static}.tt-spec{grid-template-rows:1fr;margin-top:3px}.tt-apart{margin-left:0}}
 @media (prefers-reduced-motion:reduce){.tt [data-asm],.tt-spec{transition:none}}
 </style>`;
