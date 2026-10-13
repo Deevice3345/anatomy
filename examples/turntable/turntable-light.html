@@ -167,13 +167,17 @@ body{margin:0;background:var(--anatomy-page);color:var(--anatomy-text);font:14px
 .tt-chip:focus-visible{outline:1px solid var(--anatomy-strong);outline-offset:2px}
 .tt-chip-info{margin:4px 2px 0;font-size:13px;line-height:1.45;color:var(--anatomy-muted);min-height:2.9em}
 @media (max-width:880px),(pointer:coarse){
-.tt-controls{display:grid;grid-template-columns:auto 1fr auto;gap:12px 10px;padding:12px 0}
+.tt-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;padding:4px 0 14px;border-top:0}
 .tt-controls>.tt-label{display:none}
-.tt-seg{justify-self:center}
-.tt-seg button{min-width:64px;text-align:center}
+.tt-seg{grid-column:1/-1;order:-1;display:grid;grid-template-columns:1fr 1fr}
+.tt-seg button{min-width:0;text-align:center}
+.tt-controls button{white-space:nowrap;min-width:0}
+.tt .iso-plate{padding:40px 12px 64px}
+.tt .iso-plate-corner[data-corner="hint"]{bottom:22px;left:0;right:0;white-space:normal;letter-spacing:.06em}
+.tt .iso-plate-corner[data-corner="readout"]{left:0;right:auto;bottom:0;letter-spacing:0}
 .tt-seg button,.tt-apart{box-sizing:border-box;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;font-size:14px}
-.tt-apart{margin-left:0}
-.tt-pitch{grid-column:1/-1;order:1;gap:12px}
+.tt-apart{margin-left:0;order:1;width:100%}
+.tt-pitch{grid-column:1/-1;order:0;gap:12px}
 .tt-pitch input{-webkit-appearance:none;appearance:none;height:44px;background:transparent;margin:0}
 .tt-pitch input::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--anatomy-lo)}
 .tt-pitch input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-12px;border-radius:50%;background:var(--anatomy-strong);border:3px solid var(--anatomy-page);box-shadow:0 0 0 1px var(--anatomy-strong)}
@@ -899,6 +903,7 @@ function spindleSeg(z0, z1, cap) {
 }
 
 const root = document.querySelector(".tt");
+try { if (matchMedia("(pointer:coarse)").matches) { const h = root.querySelector('[data-corner="hint"]'); if (h) h.textContent = "Tap the deck to take it apart"; } } catch {}
 const stage = root.querySelector(".iso-stage");
 const svg = stage.querySelector("svg");
 const $ = (name) => svg.querySelector('[data-part="' + name + '"]');
