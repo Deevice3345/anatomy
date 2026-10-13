@@ -542,11 +542,11 @@ function draw() {
   led45.setAttribute("data-tone", speed === 45 ? "hi" : "lo");
   const text = (speed === 33 ? "33\\u2153" : "45") + " \\u00b7 " + sign + Math.abs(pitch).toFixed(1) + "% \\u00b7 " + rpm.toFixed(2) + " rpm \\u00b7 " + lock;
   if (readout.textContent !== text) readout.textContent = text;
-  if (document.activeElement !== pitchIn) pitchIn.value = pitchTarget.toFixed(1);
+  if (!sliding && document.activeElement !== pitchIn) pitchIn.value = pitchTarget.toFixed(1);
   pitchOut.textContent = (pitchTarget > 0.05 ? "+" : pitchTarget < -0.05 ? "\\u2212" : "") + Math.abs(pitchTarget).toFixed(1) + "%";
   speedBtns.forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.speedBtn) === speed)));
   apartBtn.setAttribute("aria-pressed", String(!!apart));
-  apartBtn.textContent = apart ? "Put it back together" : "Take it apart";
+  apartBtn.textContent = apart ? "Put it back" : "Take it apart";
   stage.setAttribute("aria-valuenow", pitch.toFixed(1));
   stage.setAttribute("aria-valuetext", text + (apart ? ", taken apart" : ""));
 }
@@ -596,6 +596,18 @@ stage.addEventListener("keydown", (event) => {
   else if (event.key === " " || event.key === "Enter") { event.preventDefault(); setApart(apart ? 0 : 1); hold(); }
   else if (event.key === "Escape") { event.preventDefault(); setApart(0); setFocus(""); pinned = ""; hold(); }
 });
+let sliding = false;
+const pitchFromX = (x) => { const r = pitchIn.getBoundingClientRect(), pad = 14; return Math.round((clamp((x - r.left - pad) / Math.max(1, r.width - pad * 2), 0, 1) * 2 - 1) * RANGE * 10) / 10; };
+const slideTo = (x) => { const v = pitchFromX(x); pitchIn.value = String(Math.abs(v) < 0.5 ? 0 : v); setPitch(Number(pitchIn.value)); };
+pitchIn.addEventListener("pointerdown", (e) => {
+  sliding = true;
+  if (e.pointerType === "mouse") return;
+  e.preventDefault();
+  try { pitchIn.setPointerCapture(e.pointerId); } catch {}
+  slideTo(e.clientX);
+});
+pitchIn.addEventListener("pointermove", (e) => { if (sliding && e.pointerType !== "mouse") { e.preventDefault(); slideTo(e.clientX); } });
+["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => pitchIn.addEventListener(t, () => { sliding = false; }));
 pitchIn.addEventListener("input", () => setPitch(Number(pitchIn.value)));
 apartBtn.addEventListener("click", () => { setApart(apart ? 0 : 1); hold(); });
 speedBtns.forEach((b) => b.addEventListener("click", () => { speed = Number(b.dataset.speedBtn); hold(); }));
@@ -704,9 +716,12 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-seg button,.tt-apart{all:unset;cursor:pointer;font:500 13px/1 var(--tt-mono);color:var(--anatomy-text);padding:8px 12px;font-variant-numeric:tabular-nums}
 .tt-seg button+button{border-left:1px solid var(--anatomy-lo)}
 .tt-seg button[aria-pressed="true"]{background:var(--anatomy-strong);color:var(--anatomy-page)}
-.tt-seg button:hover:not([aria-pressed="true"]),.tt-apart:hover{background:var(--anatomy-card)}
+@media (hover:hover){.tt-seg button:hover:not([aria-pressed="true"]),.tt-apart:hover{background:var(--anatomy-card)}}
+.tt-seg button:active,.tt-apart:active{transform:translateY(1px)}
 .tt-pitch{display:flex;align-items:center;gap:10px;flex:1 1 200px;min-width:0}
-.tt-pitch input{flex:1;min-width:0;accent-color:var(--anatomy-strong)}
+.tt-pitch input{flex:1;min-width:0;accent-color:var(--anatomy-strong);touch-action:pan-y}
+.tt-controls button,.tt-controls input,.tt .iso-stage{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.tt-pitch input{touch-action:pan-y}
 .tt-pitch output{font:500 13px/1 var(--tt-mono);color:var(--anatomy-strong);min-width:4.2em;text-align:right;font-variant-numeric:tabular-nums}
 .tt-apart{border:1px solid var(--anatomy-lo);border-radius:4px;margin-left:auto}
 .tt-apart.tt-sound{margin-left:0}
@@ -737,6 +752,21 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-chip[data-on] b{color:var(--anatomy-page)}
 .tt-chip:focus-visible{outline:1px solid var(--anatomy-strong);outline-offset:2px}
 .tt-chip-info{margin:4px 2px 0;font-size:13px;line-height:1.45;color:var(--anatomy-muted);min-height:2.9em}
+@media (max-width:880px),(pointer:coarse){
+.tt-controls{display:grid;grid-template-columns:auto 1fr auto;gap:12px 10px;padding:12px 0}
+.tt-controls>.tt-label{display:none}
+.tt-seg{justify-self:center}
+.tt-seg button{min-width:64px;text-align:center}
+.tt-seg button,.tt-apart{box-sizing:border-box;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;font-size:14px}
+.tt-apart{margin-left:0}
+.tt-pitch{grid-column:1/-1;order:1;gap:12px}
+.tt-pitch input{-webkit-appearance:none;appearance:none;height:44px;background:transparent;margin:0}
+.tt-pitch input::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--anatomy-lo)}
+.tt-pitch input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-12px;border-radius:50%;background:var(--anatomy-strong);border:3px solid var(--anatomy-page);box-shadow:0 0 0 1px var(--anatomy-strong)}
+.tt-pitch input::-moz-range-track{height:4px;border-radius:2px;background:var(--anatomy-lo)}
+.tt-pitch input::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--anatomy-strong);border:3px solid var(--anatomy-page)}
+.tt-pitch output{font-size:14px}
+}
 @media (max-width:880px){.tt-mobile{display:block}.tt-side{display:none}.tt{grid-template-columns:minmax(0,1fr)}.tt-side{position:static}.tt-spec{grid-template-rows:1fr;margin-top:3px}.tt-apart{margin-left:0}}
 @media (prefers-reduced-motion:reduce){.tt [data-asm],.tt-spec{transition:none}}
 </style>`;
