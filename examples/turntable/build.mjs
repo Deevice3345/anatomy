@@ -631,6 +631,7 @@ partButtons.forEach((button) => {
 });
 const musicEl = document.getElementById("tt-music");
 const soundBtn = root.querySelector("[data-sound-btn]");
+const SPK = (on) => '<svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/>' + (on ? '<path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' : '<path d="M11 6l4 4M15 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>') + '</svg>';
 const sfx = (() => {
   let ctx = null, master, music = null, motor, noise, on = false, lastSpeed = null, lastPitch = null, slideAt = 0;
   const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
@@ -660,7 +661,7 @@ const sfx = (() => {
     const gain = ctx.createGain(); gain.gain.value = 0.8; music.connect(gain).connect(master);
     music.playbackRate.value = rpm / (100 / 3); music.start();
   }
-  const label = () => { soundBtn.setAttribute("aria-pressed", String(on)); soundBtn.textContent = on ? "Sound on" : "Sound off"; };
+  const label = () => { soundBtn.setAttribute("aria-pressed", String(on)); soundBtn.innerHTML = SPK(on) + "<span>" + (on ? "Sound: on" : "Sound: off") + "</span>"; };
   return {
     available: !!musicEl,
     async toggle() {
@@ -725,7 +726,8 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-pitch input{touch-action:pan-y}
 .tt-pitch output{font:500 13px/1 var(--tt-mono);color:var(--anatomy-strong);min-width:4.2em;text-align:right;font-variant-numeric:tabular-nums}
 .tt-apart{border:1px solid var(--anatomy-lo);border-radius:4px;margin-left:auto}
-.tt-apart.tt-sound{margin-left:0}
+.tt-apart.tt-sound{margin-left:0;display:inline-flex;align-items:center;gap:7px}
+.tt-ico{width:15px;height:15px;flex:none}
 .tt-sound[aria-pressed="true"]{background:var(--anatomy-strong);color:var(--anatomy-page);border-color:var(--anatomy-strong)}
 .tt-apart[aria-pressed="true"]{border-color:var(--anatomy-strong);color:var(--anatomy-strong)}
 .tt-seg button:focus-visible,.tt-apart:focus-visible,.tt-pitch input:focus-visible{outline:1px solid var(--anatomy-strong);outline-offset:2px}
@@ -802,7 +804,7 @@ const plate = k.plateHtml({
 const list = PARTS.map((p, i) => `<li><button type="button" class="tt-part" data-part="${p.id}"><span class="tt-num">${String(i + 1).padStart(2, "0")}</span><span class="tt-name">${p.name}</span><span class="tt-fig">${p.fig}</span><span class="tt-spec"><span>${p.spec}</span></span></button></li>`).join("");
 const side = `<aside class="tt-side" aria-label="Parts"><h2>Parts</h2><p>Bottom to top. Hover a part to pick it out; click to pin it and take the deck apart.</p><ol class="tt-parts">${list}</ol></aside>`;
 const head = `<header class="tt-head"><span class="tt-eyebrow">Teardown · Fig 1</span><h1>Direct-drive turntable</h1><ul class="tt-specs"><li><b>Quartz</b>-locked direct drive</li><li><b>33⅓ · 45</b> rpm</li><li><b>±8%</b> pitch</li><li><b>0.7 s</b> to speed</li><li><b>230 mm</b> tonearm</li></ul></header>`;
-const controls = `<div class="tt-controls"><button type="button" class="tt-apart tt-sound" data-sound-btn aria-pressed="false">Sound off</button><span class="tt-label">Speed</span><span class="tt-seg" role="group" aria-label="Speed"><button type="button" data-speed-btn="33" aria-pressed="true">33⅓</button><button type="button" data-speed-btn="45" aria-pressed="false">45</button></span><label class="tt-pitch" for="tt-pitch"><span class="tt-label">Pitch</span><input id="tt-pitch" type="range" min="-8" max="8" step="0.1" value="0" list="tt-detents"><output data-pitch-out>0.0%</output></label><datalist id="tt-detents"><option value="0"></option></datalist><button type="button" class="tt-apart" data-apart-btn aria-pressed="false">Take it apart</button></div>`;
+const controls = `<div class="tt-controls"><button type="button" class="tt-apart tt-sound" data-sound-btn aria-pressed="false"><svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 6l4 4M15 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>Sound: off</span></button><span class="tt-label">Speed</span><span class="tt-seg" role="group" aria-label="Speed"><button type="button" data-speed-btn="33" aria-pressed="true">33⅓</button><button type="button" data-speed-btn="45" aria-pressed="false">45</button></span><label class="tt-pitch" for="tt-pitch"><span class="tt-label">Pitch</span><input id="tt-pitch" type="range" min="-8" max="8" step="0.1" value="0" list="tt-detents"><output data-pitch-out>0.0%</output></label><datalist id="tt-detents"><option value="0"></option></datalist><button type="button" class="tt-apart" data-apart-btn aria-pressed="false">Take it apart</button></div>`;
 const soundArg = process.argv.find((a) => a.startsWith("--sound="));
 const music = soundArg ? `<script type="text/plain" id="tt-music">${readFileSync(soundArg.slice(8)).toString("base64")}</script>` : "";
 const chipRow = `<div class="tt-mobile"><div class="tt-chips" role="group" aria-label="Parts">${PARTS.map((p, i) => `<button type="button" class="tt-chip" data-part="${p.id}" aria-pressed="false"><b>${String(i + 1).padStart(2, "0")}</b>${p.name}</button>`).join("")}</div><p class="tt-chip-info" data-chip-info aria-live="polite">Tap a part to pick it out.</p></div>`;
