@@ -50,7 +50,7 @@ const PITCH_RANGE = 8;
 
 const COILS = 12;
 
-const RIDES = { chassis: { parent: null, lift: 190 }, platter: { parent: "chassis", lift: 120 }, mat: { parent: "platter", lift: 46 }, arm: { parent: "chassis", lift: 72 } };
+const RIDES = { chassis: { parent: null, lift: 190 }, platter: { parent: "chassis", lift: 120 }, mat: { parent: "platter", lift: 46 }, arm: { parent: "mat", lift: 0 } };
 const TOP_LIFT = RIDES.chassis.lift + RIDES.platter.lift + RIDES.mat.lift;
 
 const PARTS = [
