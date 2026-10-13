@@ -602,13 +602,13 @@ function tick(now) {
   last = now;
   const calm = still.matches;
   if (touring) { clock = (clock + dt) % TOUR_LEN; setApart(tourAt(clock)[1]); }
-  cap = calm ? pitchTarget : cap + (pitchTarget - cap) * (1 - Math.exp(-dt / 0.22));
+  cap = cap + (pitchTarget - cap) * (1 - Math.exp(-dt / 0.22));
   if (Math.abs(pitchTarget - cap) < 0.002) cap = pitchTarget;
   pitch = cap;
   const want = running ? SPEEDS[speed] * (1 + pitch / 100) : 0;
-  rpm = calm ? want : running ? rpm + (want - rpm) * (1 - Math.exp(-dt / 0.35)) : Math.max(0, rpm - (rpm / 0.3 + 4) * dt);
+  rpm = running ? rpm + (want - rpm) * (1 - Math.exp(-dt / 0.35)) : Math.max(0, rpm - (rpm / 0.3 + 4) * dt);
   armGoal = (sfx.available ? sfx.isOn() : running) ? 3 : 0;
-  if (armT !== armGoal) { const step = (armT < 1 || armT >= 2 ? 1 / 0.3 : 1 / 0.85) * dt; armT = calm ? armGoal : armGoal > armT ? Math.min(armGoal, armT + step) : Math.max(armGoal, armT - step); }
+  if (armT !== armGoal) { const step = (armT < 1 || armT >= 2 ? 1 / 0.3 : 1 / 0.85) * dt; armT = armGoal > armT ? Math.min(armGoal, armT + step) : Math.max(armGoal, armT - step); }
   const omega = (rpm / 60) * Math.PI * 2;
   theta = (theta + omega * dt) % (Math.PI * 2);
   ROWS.forEach((row, i) => { phases[i] = (phases[i] + apparent(omega, row.n) * dt) % (Math.PI * 2); });
@@ -725,10 +725,10 @@ const sfx = (() => {
     update(rpmNow, speedNow, target, down) {
       if (!on || !ctx) return;
       const r = rpmNow / (100 / 3), now = ctx.currentTime;
-      if (music) music.playbackRate.setTargetAtTime(Math.max(0.001, r), now, 0.03);
+      if (music) { music.playbackRate.cancelScheduledValues(now); music.playbackRate.value = Math.max(0.01, r); }
       if (musicGain) musicGain.gain.setTargetAtTime(down ? 0.8 * Math.min(1, r / 0.12) : 0, now, 0.04);
       motorGain.gain.setTargetAtTime(0.025 * Math.min(1, r), now, 0.05);
-      motor.frequency.setTargetAtTime(Math.max(1, 96 * r), now, 0.03);
+      motor.frequency.cancelScheduledValues(now); motor.frequency.value = Math.max(1, 96 * r);
       if (lastSpeed !== null && speedNow !== lastSpeed) click();
       lastSpeed = speedNow;
       if (lastPitch !== null && Math.abs(target - lastPitch) > 0.05 && now - slideAt > 0.25) { slideAt = now; burst({ lo: 900, hi: 3200, peak: 0.12, a: 0.12, d: 0.2 }); }
