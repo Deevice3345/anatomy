@@ -469,6 +469,9 @@ const dotsG = $("dots"), labelG = $("label"), capG = $("cap"), tabG = $("vrtab")
 const tips = { low: $("tip-low"), mid: $("tip-mid"), high: $("tip-high") };
 const riders = Object.keys(RIDES).map((name) => ({ name, els: [...svg.querySelectorAll('[data-ride="' + name + '"]')] }));
 const partButtons = [...root.querySelectorAll(".tt-part")];
+const chips = [...root.querySelectorAll(".tt-chip")];
+const chipInfo = root.querySelector("[data-chip-info]");
+const PARTS = ${JSON.stringify(PARTS)};
 const pitchIn = root.querySelector("#tt-pitch"), pitchOut = root.querySelector("[data-pitch-out]"), apartBtn = root.querySelector("[data-apart-btn]"), speedBtns = [...root.querySelectorAll("[data-speed-btn]")];
 const groups = [...svg.querySelectorAll("[data-asm]")];
 const readout = root.querySelector("[data-readout]");
@@ -500,6 +503,9 @@ function setFocus(name) {
   stage.toggleAttribute("data-focus", !!name);
   groups.forEach((g) => g.toggleAttribute("data-on", g.getAttribute("data-asm") === name));
   partButtons.forEach((b) => b.toggleAttribute("data-on", b.dataset.part === name));
+  chips.forEach((c) => { c.toggleAttribute("data-on", c.dataset.part === name); c.setAttribute("aria-pressed", String(c.dataset.part === name)); });
+  const info = PARTS.find((p) => p.id === name);
+  chipInfo.textContent = info ? info.spec : "Tap a part to pick it out.";
 }
 const lifted = (name) => { let z = 0, n = name; while (n) { z += springs[n].at; n = RIDES[n].parent; } return z; };
 function apparent(omega, n) {
@@ -593,6 +599,15 @@ stage.addEventListener("keydown", (event) => {
 pitchIn.addEventListener("input", () => setPitch(Number(pitchIn.value)));
 apartBtn.addEventListener("click", () => { setApart(apart ? 0 : 1); hold(); });
 speedBtns.forEach((b) => b.addEventListener("click", () => { speed = Number(b.dataset.speedBtn); hold(); }));
+chips.forEach((chip) => {
+  const name = chip.dataset.part;
+  chip.addEventListener("click", () => {
+    pinned = pinned === name ? "" : name;
+    setFocus(pinned);
+    if (pinned) { setApart(1); try { chip.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); } catch {} }
+    hold();
+  });
+});
 partButtons.forEach((button) => {
   const name = button.dataset.part;
   button.addEventListener("pointerenter", () => setFocus(name));
@@ -713,7 +728,16 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-spec{grid-column:2/-1;font-size:12.5px;line-height:1.5;color:var(--anatomy-muted);display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s ease}
 .tt-spec>span{overflow:hidden}
 .tt-part:hover .tt-spec,.tt-part:focus-visible .tt-spec,.tt-part[data-on] .tt-spec{grid-template-rows:1fr;margin-top:3px}
-@media (max-width:880px){.tt{grid-template-columns:minmax(0,1fr)}.tt-side{position:static}.tt-spec{grid-template-rows:1fr;margin-top:3px}.tt-apart{margin-left:0}}
+.tt-mobile{display:none}
+.tt-chips{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 0 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tt-chips::-webkit-scrollbar{display:none}
+.tt-chip{all:unset;box-sizing:border-box;flex:none;scroll-snap-align:center;display:inline-flex;align-items:baseline;gap:6px;padding:7px 12px;border:1px solid var(--anatomy-lo);border-radius:999px;font:500 13px/1.2 var(--tt-sans);color:var(--anatomy-text);cursor:pointer;white-space:nowrap}
+.tt-chip b{font:400 11px/1 var(--tt-mono);color:var(--anatomy-muted)}
+.tt-chip[data-on]{background:var(--anatomy-strong);border-color:var(--anatomy-strong);color:var(--anatomy-page)}
+.tt-chip[data-on] b{color:var(--anatomy-page)}
+.tt-chip:focus-visible{outline:1px solid var(--anatomy-strong);outline-offset:2px}
+.tt-chip-info{margin:4px 2px 0;font-size:13px;line-height:1.45;color:var(--anatomy-muted);min-height:2.9em}
+@media (max-width:880px){.tt-mobile{display:block}.tt-side{display:none}.tt{grid-template-columns:minmax(0,1fr)}.tt-side{position:static}.tt-spec{grid-template-rows:1fr;margin-top:3px}.tt-apart{margin-left:0}}
 @media (prefers-reduced-motion:reduce){.tt [data-asm],.tt-spec{transition:none}}
 </style>`;
 
@@ -738,7 +762,9 @@ const head = `<header class="tt-head"><span class="tt-eyebrow">Teardown · Fig 1
 const controls = `<div class="tt-controls"><button type="button" class="tt-apart tt-sound" data-sound-btn aria-pressed="false">Sound off</button><span class="tt-label">Speed</span><span class="tt-seg" role="group" aria-label="Speed"><button type="button" data-speed-btn="33" aria-pressed="true">33⅓</button><button type="button" data-speed-btn="45" aria-pressed="false">45</button></span><label class="tt-pitch" for="tt-pitch"><span class="tt-label">Pitch</span><input id="tt-pitch" type="range" min="-8" max="8" step="0.1" value="0" list="tt-detents"><output data-pitch-out>0.0%</output></label><datalist id="tt-detents"><option value="0"></option></datalist><button type="button" class="tt-apart" data-apart-btn aria-pressed="false">Take it apart</button></div>`;
 const soundArg = process.argv.find((a) => a.startsWith("--sound="));
 const music = soundArg ? `<script type="text/plain" id="tt-music">${readFileSync(soundArg.slice(8)).toString("base64")}</script>` : "";
-const body = `${css}<div class="tt">${head}<div class="tt-main">${plate}${controls}</div>${side}</div>${music}`;
+const chipRow = `<div class="tt-mobile"><div class="tt-chips" role="group" aria-label="Parts">${PARTS.map((p, i) => `<button type="button" class="tt-chip" data-part="${p.id}" aria-pressed="false"><b>${String(i + 1).padStart(2, "0")}</b>${p.name}</button>`).join("")}</div><p class="tt-chip-info" data-chip-info aria-live="polite">Tap a part to pick it out.</p></div>`;
+const plateWithChips = plate.replace("<figcaption", `${chipRow}<figcaption`);
+const body = `${css}<div class="tt">${head}<div class="tt-main">${plateWithChips}${controls}</div>${side}</div>${music}`;
 
 const name = theme === "light" ? "turntable-light.html" : "turntable.html";
 writeFileSync(join(HERE, name), k.pageHtml({ title: "Direct-drive turntable", theme, body, script: kitScript() + live, width: 1000 }));
