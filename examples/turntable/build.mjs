@@ -37,7 +37,7 @@ const FLASH = 120;
 const rowPitch = (n, base) => ((FLASH * 60) / n / base - 1) * 100;
 
 const PIVOT = [168, -115];
-const ARM_Z = 36;
+const ARM_Z = 47;
 const ARM_R = 4.2;
 const SHELL = [196, 226];
 const REST_S = 150;
@@ -342,36 +342,36 @@ const COIL_TOPS = Array.from({ length: COILS }, (_, i) => k.onTop(coilRing(i), 1
 const CONSTS = { P, C, PLATTER_R, REC_TOP, LABEL_R, SPINDLE_TOP, COILS, COIL_TOPS };
 const dyn = new Function(...Object.keys(k), ...Object.keys(CONSTS), `${DYNAMIC}; return { rowDots, labelMarks, coilPath, spindleSeg };`)(...Object.values(k), ...Object.values(CONSTS));
 
-function tonearm() {
+const ARM_REACH = SHELL[0] + 25;
+const rotArm = (x, y, phi) => { const dx = x - PIVOT[0], dy = y - PIVOT[1], c = Math.cos(phi), sn = Math.sin(phi); return [PIVOT[0] + dx * c - dy * sn, PIVOT[1] + dx * sn + dy * c]; };
+const PLAY_PHI = (() => { let lo = 0, hi = 1.2; const r = (phi) => { const [x, y] = rotArm(PIVOT[0], PIVOT[1] + ARM_REACH, phi); return Math.hypot(x - C[0], y - C[1]); }; for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (r(mid) > 138) lo = mid; else hi = mid; } return (lo + hi) / 2; })();
+const ARM_STEPS = 40;
+const ARM_LIFT = 7;
+
+function tonearmBase() {
   const out = [];
   const [px, py] = PIVOT;
-  const F = G.frameAlong([px, py, ARM_Z], [0, 1, 0]);
   out.push(S(k.cylinder(px, py, 27, 0, 3, P, 64, 0.6), { tone: "mid" }));
   out.push(D(Array.from({ length: 4 }, (_, i) => at([px + Math.sin(i * 1.57 + 0.78) * 23.5, py - Math.cos(i * 1.57 + 0.78) * 23.5, 3])), { size: 0.45 }));
   out.push(S(k.cylinder(px, py, 20, 3, 11, P, 56), { tone: "mid" }));
   out.push(L(k.knurl(px, py, 20, 4, 13, 72, P), { tone: "lo" }));
   out.push(S(k.cylinder(px, py, 9, 14, 14, P, 32), { tone: "mid", crease: "none" }));
   out.push(L(k.sideArc(px, py, 9, 20, P, 20), { tone: "lo" }));
-  out.push(S(G.disc(-34, -12, 5, F, P), { tone: "mid" }));
-  out.push(S(G.disc(-64, -34, 17, F, P, { bevel: 0.6 }), { tone: "mid" }));
-  out.push(k.fadedSvg(G.ribsOf(F, -61, -37, 17, 56, P, { fade: [0.05, 0.5], seams: true }), { tone: "lo" }));
-  out.push(S(G.disc(-70, -64, 6, F, P), { tone: "mid" }));
-  out.push(S(k.cylinder(px, py, 12, 28, 16, P, 40, 0.5), { tone: "mid" }));
-  out.push(L(k.sideArc(px, py, 12, 36, P, 24), { tone: "faint" }));
-  out.push(L(k.ring(px, py, 6, 44, P, 24), { tone: "lo" }));
-  out.push(D([at([px, py, 44])], { size: 0.6, tone: "hi" }));
-  const rest = py + REST_S;
+  return out.join("");
+}
+
+function tonearmTower() {
+  const out = [];
+  const [px, py] = PIVOT;
+  const top = ARM_Z + 8;
+  out.push(S(k.cylinder(px, py, 12, 28, top - 28, P, 40, 0.5), { tone: "mid" }));
+  out.push(L(k.sideArc(px, py, 12, ARM_Z, P, 24), { tone: "faint" }));
+  out.push(L(k.ring(px, py, 6, top, P, 24), { tone: "lo" }));
+  out.push(D([at([px, py, top])], { size: 0.6, tone: "hi" }));
+  const rest = py + REST_S, cradle = ARM_Z - ARM_R - 8;
   out.push(S(k.cylinder(px, rest, 6, 0, 3, P, 24), { tone: "mid" }));
-  out.push(S(k.cylinder(px, rest, 3.4, 3, 25, P, 20), { tone: "mid", crease: "none" }));
-  out.push(S(k.slabOf({ x: px - 8, y: rest - 4, w: 16, d: 8, r: 1.5 }, 28, ARM_Z - ARM_R - 28, P, 3, 0.3), { tone: "mid" }));
-  out.push(S(k.slabOf({ x: px - 6, y: py + SHELL[0] + 6, w: 12, d: 18, r: 1 }, 24, ARM_Z - 3 - 24, P, 3, 0.3), { tone: "lo" }));
-  out.push(L(k.segment([px, py + SHELL[0] + 22, 24], [px, py + SHELL[0] + 25, 21], P), { tone: "hi" }));
-  out.push(D([at([px, py + SHELL[0] + 25, 21])], { size: 0.5, tone: "hi" }));
-  out.push(S(G.disc(12, SHELL[0] + 2, ARM_R, F, P), { tone: "hi", crease: "none" }));
-  out.push(L(G.arcOf(F, 22, ARM_R, P), { tone: "lo" }));
-  out.push(S(k.slabOf({ x: px - 10, y: py + SHELL[0], w: 20, d: SHELL[1] - SHELL[0], r: 2.5 }, ARM_Z - 3, 4, P, 4, 0.4), { tone: "mid" }));
-  out.push(D([at([px - 5, py + SHELL[0] + 10, ARM_Z + 1]), at([px + 5, py + SHELL[0] + 10, ARM_Z + 1])], { size: 0.45 }));
-  out.push(S(k.slabOf({ x: px + 10, y: py + SHELL[1] - 10, w: 12, d: 4, r: 1 }, ARM_Z, 1.2, P, 2), { tone: "mid" }));
+  out.push(S(k.cylinder(px, rest, 3.4, 3, cradle - 3, P, 20), { tone: "mid", crease: "none" }));
+  out.push(S(k.slabOf({ x: px - 8, y: rest - 4, w: 16, d: 8, r: 1.5 }, cradle, ARM_Z - ARM_R - cradle, P, 3, 0.3), { tone: "mid" }));
   const lever = [px + 40, py + 42];
   out.push(S(k.cylinder(lever[0], lever[1], 8, 0, 6, P, 28), { tone: "mid" }));
   out.push(S(k.slabOf({ x: lever[0] - 2, y: lever[1] - 2, w: 4, d: 20, r: 1.5 }, 6, 3, P, 3, 0.3), { tone: "mid" }));
@@ -384,6 +384,36 @@ function tonearm() {
   out.push(L(ticks.minor, { tone: "lo" }), L(ticks.major, { tone: "mid" }));
   out.push(L(k.lineOnTop(skate, [skate[0] + 7, skate[1]], 10, P), { tone: "hi" }));
   return out.join("");
+}
+
+function armSwing(phi) {
+  const [px, py] = PIVOT;
+  const F = G.frameAlong([px, py, ARM_Z], [-Math.sin(phi), Math.cos(phi), 0]);
+  const R = (x, y) => rotArm(x, y, phi);
+  const A = (x, y, z) => at([...R(x, y), z]);
+  const slab = (plan, z, h, steps, bevel) => k.extrude(k.ringOf(plan, steps).map(([x, y]) => R(x, y)), z, h, P, { convex: true, bevel });
+  const back = [
+    S(G.disc(-34, -12, 5, F, P), { tone: "mid" }),
+    S(G.disc(-64, -34, 17, F, P, { bevel: 0.6 }), { tone: "mid" }),
+    k.fadedSvg(G.ribsOf(F, -61, -37, 17, 56, P, { fade: [0.05, 0.5], seams: true }), { tone: "lo" }),
+    S(G.disc(-70, -64, 6, F, P), { tone: "mid" }),
+  ].join("");
+  const front = [
+    S(slab({ x: px - 6, y: py + SHELL[0] + 6, w: 12, d: 18, r: 1 }, ARM_Z - 12, 9, 3, 0.3), { tone: "lo" }),
+    L(k.pathOf([A(px, py + SHELL[0] + 22, ARM_Z - 12), A(px, py + SHELL[0] + 25, REC_TOP + 0.3)]), { tone: "hi" }),
+    D([A(px, py + SHELL[0] + 25, REC_TOP + 0.3)], { size: 0.5, tone: "hi" }),
+    S(G.disc(12, SHELL[0] + 2, ARM_R, F, P), { tone: "hi", crease: "none" }),
+    L(G.arcOf(F, 22, ARM_R, P), { tone: "lo" }),
+    S(slab({ x: px - 10, y: py + SHELL[0], w: 20, d: SHELL[1] - SHELL[0], r: 2.5 }, ARM_Z - 3, 4, 4, 0.4), { tone: "mid" }),
+    D([A(px - 5, py + SHELL[0] + 10, ARM_Z + 1), A(px + 5, py + SHELL[0] + 10, ARM_Z + 1)], { size: 0.45 }),
+    S(slab({ x: px + 10, y: py + SHELL[1] - 10, w: 12, d: 4, r: 1 }, ARM_Z, 1.2, 2, 0), { tone: "mid" }),
+  ].join("");
+  return { back, front };
+}
+const ARM_FRAMES = Array.from({ length: ARM_STEPS + 1 }, (_, i) => armSwing((i / ARM_STEPS) * PLAY_PHI));
+
+function tonearm() {
+  return tonearmBase() + `<g data-part="arm-back">${ARM_FRAMES[0].back}</g>` + tonearmTower() + `<g data-part="arm-front">${ARM_FRAMES[0].front}</g>`;
 }
 
 function fader() {
@@ -407,6 +437,7 @@ function buttons() {
   const start = { x: -224, y: 144, w: 44, d: 28, r: 2.5 };
   out.push(S(k.slabOf(start, 0, 4, P, 4, 0.6), { tone: "mid" }));
   out.push(L(k.planOutline(k.insetPlan(start, 3.5), 4, P, 4), { tone: "faint" }));
+  out.push(`<path data-start d="${k.slabOf(k.insetPlan(start, -3), 0, 7, P).fill}" fill="transparent" stroke="none"/>`);
   for (const [x, speed] of [[-170, 33], [-144, 45]]) {
     const plan = { x, y: 156, w: 20, d: 15, r: 1.5 };
     out.push(S(k.slabOf(plan, 0, 3, P, 3, 0.4), { tone: "mid" }));
@@ -462,6 +493,7 @@ const COIL_TOPS = ${JSON.stringify(COIL_TOPS)};
 const ROWS = ${JSON.stringify(ROWS.map((row) => ({ ...row, pitch: rowPitch(row.n, row.base) })))};
 const RIDES = ${JSON.stringify(RIDES)};
 const FLASH = ${FLASH}, RANGE = ${PITCH_RANGE}, HALF = ${FADER_HALF};
+const ARM_FRAMES = ${JSON.stringify(ARM_FRAMES)}, ARM_STEPS = ${ARM_STEPS}, ARM_LIFT = ${ARM_LIFT};
 ${DYNAMIC}
 const root = document.querySelector(".tt");
 try { if (matchMedia("(pointer:coarse)").matches) { const h = root.querySelector('[data-corner="hint"]'); if (h) h.textContent = "Tap the deck to take it apart"; } } catch {}
@@ -470,6 +502,9 @@ const svg = stage.querySelector("svg");
 const $ = (name) => svg.querySelector('[data-part="' + name + '"]');
 const dotsG = $("dots"), labelG = $("label"), capG = $("cap"), tabG = $("vrtab"), coilsP = $("coils"), halo = $("lift-halo"), chHalo = $("chassis-halo");
 const tips = { low: $("tip-low"), mid: $("tip-mid"), high: $("tip-high") };
+const armBackG = $("arm-back"), armFrontG = $("arm-front"), stopBtn = root.querySelector("[data-stop-btn]");
+let running = true, armT = 0, armGoal = 0, armIdx = 0, needle = false;
+const smooth = (x) => x * x * (3 - 2 * x);
 const riders = Object.keys(RIDES).map((name) => ({ name, els: [...svg.querySelectorAll('[data-ride="' + name + '"]')] }));
 const partButtons = [...root.querySelectorAll(".tt-part")];
 const chips = [...root.querySelectorAll(".tt-chip")];
@@ -526,7 +561,15 @@ function draw() {
   tips.low.innerHTML = "";
   tips.mid.innerHTML = spindleSeg(PLATTER_TOP + pl, Math.min(PLATTER_TOP + mt, top), PLATTER_TOP + mt >= top);
   tips.high.innerHTML = spindleSeg(REC_TOP + 0.2 + mt, top, true);
-  sfx.update(rpm, speed, pitchTarget);
+  const swing = smooth(clamp(armT - 1, 0, 1)), liftK = armT < 1 ? armT : armT <= 2 ? 1 : 3 - armT;
+  const idx = Math.round(swing * ARM_STEPS);
+  if (idx !== armIdx) { armIdx = idx; armBackG.innerHTML = ARM_FRAMES[idx].back; armFrontG.innerHTML = ARM_FRAMES[idx].front; }
+  const armLift = translateAlong(P, [0, 0, smooth(clamp(liftK, 0, 1)) * ARM_LIFT]);
+  armBackG.setAttribute("transform", armLift); armFrontG.setAttribute("transform", armLift);
+  const down = armT >= 3 - 1e-6;
+  if (down && !needle) sfx.drop();
+  needle = down; root.toggleAttribute("data-needle", needle); root.toggleAttribute("data-running", running);
+  sfx.update(rpm, speed, pitchTarget, needle);
   const omega = (rpm / 60) * Math.PI * 2;
   let html = "", locked = -1;
   ROWS.forEach((row, i) => {
@@ -540,7 +583,7 @@ function draw() {
   const sign = pitch > 0.05 ? "+" : pitch < -0.05 ? "\\u2212" : "";
   const fmt = (v) => (v > 0 ? "+" : "\\u2212") + Math.abs(v).toFixed(1) + "%";
   const target = SPEEDS[speed] * (1 + pitch / 100);
-  const lock = Math.abs(rpm - target) > 0.006 ? (rpm < target ? "speeding up" : "slowing down") : Math.abs(pitch) < 0.05 ? "quartz lock" : locked >= 0 ? fmt(ROWS[locked].pitch) + " row still" : "strobe drifting";
+  const lock = !running ? (rpm < 0.05 ? "stopped" : "braking") : Math.abs(rpm - target) > 0.006 ? (rpm < target ? "speeding up" : "slowing down") : Math.abs(pitch) < 0.05 ? "quartz lock" : locked >= 0 ? fmt(ROWS[locked].pitch) + " row still" : "strobe drifting";
   led33.setAttribute("data-tone", speed === 33 ? "hi" : "lo");
   led45.setAttribute("data-tone", speed === 45 ? "hi" : "lo");
   const text = (speed === 33 ? "33\\u2153" : "45") + " \\u00b7 " + sign + Math.abs(pitch).toFixed(1) + "% \\u00b7 " + rpm.toFixed(2) + " rpm \\u00b7 " + lock;
@@ -550,6 +593,7 @@ function draw() {
   speedBtns.forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.speedBtn) === speed)));
   apartBtn.setAttribute("aria-pressed", String(!!apart));
   apartBtn.textContent = apart ? "Put it back" : "Take it apart";
+  if (stopBtn && stopBtn.dataset.state !== String(running)) { stopBtn.dataset.state = String(running); stopBtn.innerHTML = (running ? '<svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1" fill="currentColor"/></svg><span>Stop</span>' : '<svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" fill="currentColor"/></svg><span>Start</span>'); }
   stage.setAttribute("aria-valuenow", pitch.toFixed(1));
   stage.setAttribute("aria-valuetext", text + (apart ? ", taken apart" : ""));
 }
@@ -561,8 +605,10 @@ function tick(now) {
   cap = calm ? pitchTarget : cap + (pitchTarget - cap) * (1 - Math.exp(-dt / 0.22));
   if (Math.abs(pitchTarget - cap) < 0.002) cap = pitchTarget;
   pitch = cap;
-  const want = SPEEDS[speed] * (1 + pitch / 100);
-  rpm = calm ? want : rpm + (want - rpm) * (1 - Math.exp(-dt / 0.35));
+  const want = running ? SPEEDS[speed] * (1 + pitch / 100) : 0;
+  rpm = calm ? want : running ? rpm + (want - rpm) * (1 - Math.exp(-dt / 0.35)) : Math.max(0, rpm - (rpm / 0.3 + 4) * dt);
+  armGoal = (sfx.available ? sfx.isOn() : running) ? 3 : 0;
+  if (armT !== armGoal) { const step = (armT < 1 || armT >= 2 ? 1 / 0.3 : 1 / 0.85) * dt; armT = calm ? armGoal : armGoal > armT ? Math.min(armGoal, armT + step) : Math.max(armGoal, armT - step); }
   const omega = (rpm / 60) * Math.PI * 2;
   theta = (theta + omega * dt) % (Math.PI * 2);
   ROWS.forEach((row, i) => { phases[i] = (phases[i] + apparent(omega, row.n) * dt) % (Math.PI * 2); });
@@ -584,6 +630,7 @@ if (still.matches) touring = false;
 stage.addEventListener("click", (event) => {
   const button = event.target.closest("[data-speed]");
   if (button) speed = Number(button.getAttribute("data-speed"));
+  else if (event.target.closest("[data-start]")) setRunning(!running);
   else setApart(apart ? 0 : 1);
   hold();
 });
@@ -595,6 +642,7 @@ stage.addEventListener("keydown", (event) => {
   else if (event.key === "3") { event.preventDefault(); speed = 33; hold(); }
   else if (event.key === "4" || event.key === "5") { event.preventDefault(); speed = 45; hold(); }
   else if (event.key === " " || event.key === "Enter") { event.preventDefault(); setApart(apart ? 0 : 1); hold(); }
+  else if (event.key === "s" || event.key === "S") { event.preventDefault(); setRunning(!running); }
   else if (event.key === "Escape") { event.preventDefault(); setApart(0); setFocus(""); pinned = ""; hold(); }
 });
 let sliding = false;
@@ -611,6 +659,8 @@ pitchIn.addEventListener("pointermove", (e) => { if (sliding && e.pointerType !=
 ["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => pitchIn.addEventListener(t, () => { sliding = false; }));
 pitchIn.addEventListener("input", () => setPitch(Number(pitchIn.value)));
 apartBtn.addEventListener("click", () => { setApart(apart ? 0 : 1); hold(); });
+function setRunning(v) { running = v; sfx.press(); stopBtn && stopBtn.setAttribute("aria-pressed", String(!v)); hold(); }
+if (stopBtn) stopBtn.addEventListener("click", () => setRunning(!running));
 speedBtns.forEach((b) => b.addEventListener("click", () => { speed = Number(b.dataset.speedBtn); hold(); }));
 chips.forEach((chip) => {
   const name = chip.dataset.part;
@@ -633,7 +683,7 @@ const musicEl = document.getElementById("tt-music");
 const soundBtn = root.querySelector("[data-sound-btn]");
 const SPK = (on) => '<svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/>' + (on ? '<path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' : '<path d="M11 6l4 4M15 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>') + '</svg>';
 const sfx = (() => {
-  let ctx = null, master, music = null, motor, noise, on = false, lastSpeed = null, lastPitch = null, slideAt = 0;
+  let ctx = null, master, music = null, musicGain = null, motorGain = null, motor, noise, on = false, lastSpeed = null, lastPitch = null, slideAt = 0;
   const env = (g, t, a, peak, d) => { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
   function burst({ at = 0, lo = 1500, hi = 6000, peak = 0.3, a = 0.002, d = 0.03 }) {
     const t = ctx.currentTime + at, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), c = Math.sqrt(lo * hi);
@@ -652,14 +702,14 @@ const sfx = (() => {
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     motor = ctx.createOscillator(); motor.type = "sawtooth";
-    const mf = ctx.createBiquadFilter(), mg = ctx.createGain(); mf.type = "lowpass"; mf.frequency.value = 320; mg.gain.value = 0.025;
+    const mf = ctx.createBiquadFilter(), mg = ctx.createGain(); motorGain = mg; mf.type = "lowpass"; mf.frequency.value = 320; mg.gain.value = 0.025;
     motor.connect(mf).connect(mg).connect(master); motor.start();
     const bin = atob(musicEl.textContent.trim()), bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const buf = await ctx.decodeAudioData(bytes.buffer);
     music = ctx.createBufferSource(); music.buffer = buf; music.loop = true;
-    const gain = ctx.createGain(); gain.gain.value = 0.8; music.connect(gain).connect(master);
-    music.playbackRate.value = rpm / (100 / 3); music.start();
+    const gain = ctx.createGain(); gain.gain.value = 0; musicGain = gain; music.connect(gain).connect(master);
+    music.playbackRate.value = Math.max(0.001, rpm / (100 / 3)); music.start();
   }
   const label = () => { soundBtn.setAttribute("aria-pressed", String(on)); soundBtn.innerHTML = SPK(on) + "<span>" + (on ? "Sound: on" : "Sound: off") + "</span>"; };
   return {
@@ -669,11 +719,16 @@ const sfx = (() => {
       try { if (on) { if (!ctx) await start(); else await ctx.resume(); click(); } else if (ctx) await ctx.suspend(); }
       catch { on = false; label(); }
     },
-    update(rpmNow, speedNow, target) {
+    isOn: () => on,
+    press() { if (on && ctx) click(); },
+    drop() { if (!on || !ctx) return; tone({ f0: 95, f1: 45, peak: 0.3, a: 0.002, d: 0.09 }); burst({ lo: 1500, hi: 7000, peak: 0.07, d: 0.06 }); },
+    update(rpmNow, speedNow, target, down) {
       if (!on || !ctx) return;
       const r = rpmNow / (100 / 3), now = ctx.currentTime;
-      if (music) music.playbackRate.setTargetAtTime(r, now, 0.03);
-      motor.frequency.setTargetAtTime(96 * r, now, 0.03);
+      if (music) music.playbackRate.setTargetAtTime(Math.max(0.001, r), now, 0.03);
+      if (musicGain) musicGain.gain.setTargetAtTime(down ? 0.8 * Math.min(1, r / 0.12) : 0, now, 0.04);
+      motorGain.gain.setTargetAtTime(0.025 * Math.min(1, r), now, 0.05);
+      motor.frequency.setTargetAtTime(Math.max(1, 96 * r), now, 0.03);
       if (lastSpeed !== null && speedNow !== lastSpeed) click();
       lastSpeed = speedNow;
       if (lastPitch !== null && Math.abs(target - lastPitch) > 0.05 && now - slideAt > 0.25) { slideAt = now; burst({ lo: 900, hi: 3200, peak: 0.12, a: 0.12, d: 0.2 }); }
@@ -701,7 +756,7 @@ draw();
 
 const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fragment+Mono&family=Schibsted+Grotesk:wght@400;500;700&display=swap"><style>
 .iso-dots[data-tone="lit"] circle{fill:var(--anatomy-lit);opacity:1}
-[data-speed]{cursor:pointer}
+[data-speed],[data-start]{cursor:pointer}
 .tt{--tt-sans:"Schibsted Grotesk",ui-sans-serif,system-ui,sans-serif;--tt-mono:"Fragment Mono",ui-monospace,SFMono-Regular,Menlo,monospace;display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,300px);gap:20px 32px;align-items:start;font-family:var(--tt-sans)}
 .tt-head{grid-column:1/-1;display:grid;gap:6px;padding-block:8px 4px}
 .tt-eyebrow{font:400 11px/1 var(--tt-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--anatomy-muted)}
@@ -726,6 +781,7 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-pitch input{touch-action:pan-y}
 .tt-pitch output{font:500 13px/1 var(--tt-mono);color:var(--anatomy-strong);min-width:4.2em;text-align:right;font-variant-numeric:tabular-nums}
 .tt-apart{border:1px solid var(--anatomy-lo);border-radius:4px;margin-left:auto}
+.tt-apart.tt-stop{margin-left:0;display:inline-flex;align-items:center;gap:7px}
 .tt-apart.tt-sound{margin-left:0;display:inline-flex;align-items:center;gap:7px}
 .tt-ico{width:15px;height:15px;flex:none}
 .tt-sound[aria-pressed="true"]{background:var(--anatomy-card);color:var(--anatomy-strong);border-color:var(--anatomy-strong)}
@@ -756,9 +812,9 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-chip:focus-visible{outline:1px solid var(--anatomy-strong);outline-offset:2px}
 .tt-chip-info{margin:4px 2px 0;font-size:13px;line-height:1.45;color:var(--anatomy-muted);min-height:2.9em}
 @media (max-width:880px),(pointer:coarse){
-.tt-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;padding:4px 0 14px;border-top:0}
+.tt-controls{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 10px;padding:4px 0 14px;border-top:0}
 .tt-controls>.tt-label{display:none}
-.tt-seg{grid-column:1/-1;order:-1;display:grid;grid-template-columns:1fr 1fr}
+.tt-seg{grid-column:span 4;order:-2;display:grid;grid-template-columns:1fr 1fr}
 .tt-seg button{min-width:0;text-align:center}
 .tt-controls button{white-space:nowrap;min-width:0}
 .tt .iso-plate{padding:40px 12px 64px}
@@ -767,6 +823,8 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-seg button,.tt-apart{box-sizing:border-box;min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;font-size:14px}
 .tt-apart{margin-left:0;order:1;width:100%}
 .tt-pitch{grid-column:1/-1;order:0;gap:12px}
+.tt-controls .tt-stop{grid-column:span 2;order:-1}
+.tt-controls .tt-sound,.tt-controls [data-apart-btn]{grid-column:span 3}
 .tt-pitch input{-webkit-appearance:none;appearance:none;height:44px;background:transparent;margin:0}
 .tt-pitch input::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--anatomy-lo)}
 .tt-pitch input::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-12px;border-radius:50%;background:var(--anatomy-strong);border:3px solid var(--anatomy-page);box-shadow:0 0 0 1px var(--anatomy-strong)}
@@ -804,7 +862,7 @@ const plate = k.plateHtml({
 const list = PARTS.map((p, i) => `<li><button type="button" class="tt-part" data-part="${p.id}"><span class="tt-num">${String(i + 1).padStart(2, "0")}</span><span class="tt-name">${p.name}</span><span class="tt-fig">${p.fig}</span><span class="tt-spec"><span>${p.spec}</span></span></button></li>`).join("");
 const side = `<aside class="tt-side" aria-label="Parts"><h2>Parts</h2><p>Bottom to top. Hover a part to pick it out; click to pin it and take the deck apart.</p><ol class="tt-parts">${list}</ol></aside>`;
 const head = `<header class="tt-head"><span class="tt-eyebrow">Teardown · Fig 1</span><h1>Direct-drive turntable</h1><ul class="tt-specs"><li><b>Quartz</b>-locked direct drive</li><li><b>33⅓ · 45</b> rpm</li><li><b>±8%</b> pitch</li><li><b>0.7 s</b> to speed</li><li><b>230 mm</b> tonearm</li></ul></header>`;
-const controls = `<div class="tt-controls"><button type="button" class="tt-apart tt-sound" data-sound-btn aria-pressed="false"><svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 6l4 4M15 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>Sound: off</span></button><span class="tt-label">Speed</span><span class="tt-seg" role="group" aria-label="Speed"><button type="button" data-speed-btn="33" aria-pressed="true">33⅓</button><button type="button" data-speed-btn="45" aria-pressed="false">45</button></span><label class="tt-pitch" for="tt-pitch"><span class="tt-label">Pitch</span><input id="tt-pitch" type="range" min="-8" max="8" step="0.1" value="0" list="tt-detents"><output data-pitch-out>0.0%</output></label><datalist id="tt-detents"><option value="0"></option></datalist><button type="button" class="tt-apart" data-apart-btn aria-pressed="false">Take it apart</button></div>`;
+const controls = `<div class="tt-controls"><button type="button" class="tt-apart tt-sound" data-sound-btn aria-pressed="false"><svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 6l4 4M15 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>Sound: off</span></button><span class="tt-label">Speed</span><span class="tt-seg" role="group" aria-label="Speed"><button type="button" data-speed-btn="33" aria-pressed="true">33⅓</button><button type="button" data-speed-btn="45" aria-pressed="false">45</button></span><button type="button" class="tt-apart tt-stop" data-stop-btn aria-pressed="false"><svg class="tt-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1" fill="currentColor"/></svg><span>Stop</span></button><label class="tt-pitch" for="tt-pitch"><span class="tt-label">Pitch</span><input id="tt-pitch" type="range" min="-8" max="8" step="0.1" value="0" list="tt-detents"><output data-pitch-out>0.0%</output></label><datalist id="tt-detents"><option value="0"></option></datalist><button type="button" class="tt-apart" data-apart-btn aria-pressed="false">Take it apart</button></div>`;
 const soundArg = process.argv.find((a) => a.startsWith("--sound="));
 const music = soundArg ? `<script type="text/plain" id="tt-music">${readFileSync(soundArg.slice(8)).toString("base64")}</script>` : "";
 const chipRow = `<div class="tt-mobile"><div class="tt-chips" role="group" aria-label="Parts">${PARTS.map((p, i) => `<button type="button" class="tt-chip" data-part="${p.id}" aria-pressed="false"><b>${String(i + 1).padStart(2, "0")}</b>${p.name}</button>`).join("")}</div><p class="tt-chip-info" data-chip-info aria-live="polite">Tap a part to pick it out.</p></div>`;
