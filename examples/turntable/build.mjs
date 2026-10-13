@@ -728,7 +728,7 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt-apart{border:1px solid var(--anatomy-lo);border-radius:4px;margin-left:auto}
 .tt-apart.tt-sound{margin-left:0;display:inline-flex;align-items:center;gap:7px}
 .tt-ico{width:15px;height:15px;flex:none}
-.tt-sound[aria-pressed="true"]{background:var(--anatomy-strong);color:var(--anatomy-page);border-color:var(--anatomy-strong)}
+.tt-sound[aria-pressed="true"]{background:var(--anatomy-card);color:var(--anatomy-strong);border-color:var(--anatomy-strong)}
 .tt-apart[aria-pressed="true"]{border-color:var(--anatomy-strong);color:var(--anatomy-strong)}
 .tt-seg button:focus-visible,.tt-apart:focus-visible,.tt-pitch input:focus-visible{outline:1px solid var(--anatomy-strong);outline-offset:2px}
 .tt-side{min-width:0;position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
