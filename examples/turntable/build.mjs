@@ -710,7 +710,7 @@ const css = `<link rel="preconnect" href="https://fonts.googleapis.com"><link re
 .tt .iso-figure{margin:0;min-width:0}
 .tt [data-asm]{transition:opacity .25s ease}
 .tt .iso-stage[data-focus] [data-asm]:not([data-on]){opacity:.14}
-.tt-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding:12px 14px;border-top:1px solid var(--anatomy-faint);border-bottom:1px solid var(--anatomy-faint)}
+.tt-controls{margin:10px 0 12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding:12px 14px;border-top:1px solid var(--anatomy-faint);border-bottom:1px solid var(--anatomy-faint)}
 .tt-label{font:400 10.5px/1 var(--tt-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--anatomy-muted)}
 .tt-seg{display:inline-flex;gap:0;border:1px solid var(--anatomy-lo);border-radius:4px;overflow:hidden}
 .tt-seg button,.tt-apart{all:unset;cursor:pointer;font:500 13px/1 var(--tt-mono);color:var(--anatomy-text);padding:8px 12px;font-variant-numeric:tabular-nums}
@@ -793,8 +793,8 @@ const controls = `<div class="tt-controls"><button type="button" class="tt-apart
 const soundArg = process.argv.find((a) => a.startsWith("--sound="));
 const music = soundArg ? `<script type="text/plain" id="tt-music">${readFileSync(soundArg.slice(8)).toString("base64")}</script>` : "";
 const chipRow = `<div class="tt-mobile"><div class="tt-chips" role="group" aria-label="Parts">${PARTS.map((p, i) => `<button type="button" class="tt-chip" data-part="${p.id}" aria-pressed="false"><b>${String(i + 1).padStart(2, "0")}</b>${p.name}</button>`).join("")}</div><p class="tt-chip-info" data-chip-info aria-live="polite">Tap a part to pick it out.</p></div>`;
-const plateWithChips = plate.replace("<figcaption", `${chipRow}<figcaption`);
-const body = `${css}<div class="tt">${head}<div class="tt-main">${plateWithChips}${controls}</div>${side}</div>${music}`;
+const plateWithChips = plate.replace("<figcaption", `${controls}${chipRow}<figcaption`);
+const body = `${css}<div class="tt">${head}<div class="tt-main">${plateWithChips}</div>${side}</div>${music}`;
 
 const name = theme === "light" ? "turntable-light.html" : "turntable.html";
 writeFileSync(join(HERE, name), k.pageHtml({ title: "Direct-drive turntable", theme, body, script: kitScript() + live, width: 1000 }));
